@@ -412,73 +412,72 @@ def create_biorhythm_pulse():
                 task_label = task_data.get('label', task_id)
                 task_type = task_data.get('type', 'generic') # Проверяем тип задачи
 
-                # if task_type == 'code_development': # Закомментирован блок для обработки задач code_development
-                #     print(f"Обнаружена задача на разработку: '{task_label}'. Запуск в режиме 'Оркестратор'.")
-                #     final_header = f"### Контекст Биоритма (Оркестратор). Задача: [{task_id}] '{task_label}' ###"
-                #     kolybel_log = ""
-                #     try:
-                #         github_token = get_github_token()
-                #         repo_url = task_data.get('repo_url')
-                #         if not repo_url or not github_token:
-                #             raise ValueError("Отсутствует repo_url или не удалось найти GITHUB_TOKEN для задачи на разработку.")
+                if task_type == 'code_development':
+                    print(f"Обнаружена задача на разработку: '{task_label}'. Запуск в режиме 'Оркестратор'.")
+                    final_header = f"### Контекст Биоритма (Оркестратор). Задача: [{task_id}] '{task_label}' ###"
+                    kolybel_log = ""
+                    try:
+                        github_token = get_github_token()
+                        repo_url = task_data.get('repo_url')
+                        if not repo_url or not github_token:
+                            raise ValueError("Отсутствует repo_url или не удалось найти GITHUB_TOKEN для задачи на разработку.")
 
-                #         # --- 1. ЗАПУСК ИНЖЕНЕРНОГО ЦИКЛА В КОЛЫБЕЛИ ---
-                #         # Инженер теперь "чистый", ему не нужны лишние переменные окружения
-                #         command = ["docker", "run", "--rm", "-e", f"GITHUB_TOKEN={github_token}", "-e", f"REPO_URL={repo_url}", "-e", f"TASK_ID={task_id}", "eva-kolybel:latest"]
-                #         print(f"Оркестратор: Запуск 'Инженера' в 'Колыбели' для задачи {task_id}...")
-                #         handler.update_node_attribute(task_id, 'status', 'in_progress'); handler.save_graph()
+                        # --- 1. ЗАПУСК ИНЖЕНЕРНОГО ЦИКЛА В КОЛЫБЕЛИ ---
+                        # Инженер теперь "чистый", ему не нужны лишние переменные окружения
+                        command = ["docker", "run", "--rm", "-e", f"GITHUB_TOKEN={github_token}", "-e", f"REPO_URL={repo_url}", "-e", f"TASK_ID={task_id}", "eva-kolybel:latest"]
+                        print(f"Оркестратор: Запуск 'Инженера' в 'Колыбели' для задачи {task_id}...")
+                        handler.update_node_attribute(task_id, 'status', 'in_progress'); handler.save_graph()
                         
-                #         docker_result = subprocess.run(command, check=True, capture_output=True, text=True, encoding='utf-8', timeout=1800)
+                        docker_result = subprocess.run(command, check=True, capture_output=True, text=True, encoding='utf-8', timeout=1800)
                         
-                #         kolybel_log += f"--- Лог 'Колыбели' (Инженер) STDOUT ---\n{docker_result.stdout}\n--- Конец STDOUT ---\n"
-                #         if docker_result.stderr:
-                #              kolybel_log += f"\n--- Лог 'Колыбели' (Инженер) STDERR ---\n{docker_result.stderr}\n--- Конец STDERR ---\n"
+                        kolybel_log += f"--- Лог 'Колыбели' (Инженер) STDOUT ---\n{docker_result.stdout}\n--- Конец STDOUT ---\n"
+                        if docker_result.stderr:
+                             kolybel_log += f"\n--- Лог 'Колыбели' (Инженер) STDERR ---\n{docker_result.stderr}\n--- Конец STDERR ---\n"
                         
-                #         # --- 2. ПАРСИНГ JSON-РЕЗУЛЬТАТА ОТ ИНЖЕНЕРА ---
-                #         print("Оркестратор: Парсинг результата от 'Инженера'...")
-                #         # Ищем JSON в выводе, так как stdout может содержать и другие сообщения
-                #         json_output_match = re.search(r'\{.*\}', docker_result.stdout, re.DOTALL)
-                #         if not json_output_match:
-                #             raise ValueError(f"Не удалось найти JSON в ответе от 'Инженера'. Вывод:\n{docker_result.stdout}")
+                        # --- 2. ПАРСИНГ JSON-РЕЗУЛЬТАТА ОТ ИНЖЕНЕРА ---
+                        print("Оркестратор: Парсинг результата от 'Инженера'...")
+                        # Ищем JSON в выводе, так как stdout может содержать и другие сообщения
+                        json_output_match = re.search(r'\{.*\}', docker_result.stdout, re.DOTALL)
+                        if not json_output_match:
+                            raise ValueError(f"Не удалось найти JSON в ответе от 'Инженера'. Вывод:\n{docker_result.stdout}")
                         
-                #         kolybel_result_data = json.loads(json_output_match.group(0))
+                        kolybel_result_data = json.loads(json_output_match.group(0))
 
-                #         if kolybel_result_data.get("status") != "success":
-                #             raise ValueError(f"Статус ответа 'Инженера' не 'success': {kolybel_result_data.get('error_message', 'Нет сообщения об ошибке')}")
+                        if kolybel_result_data.get("status") != "success":
+                            raise ValueError(f"Статус ответа 'Инженера' не 'success': {kolybel_result_data.get('error_message', 'Нет сообщения об ошибке')}")
                         
-                #         branch_name = kolybel_result_data["branch_name"]
-                #         git_diff = kolybel_result_data["git_diff"]
-                #         print(f"Оркестратор: 'Инженер' успешно вернул ветку '{branch_name}'.")
+                        branch_name = kolybel_result_data["branch_name"]
+                        git_diff = kolybel_result_data["git_diff"]
+                        print(f"Оркестратор: 'Инженер' успешно вернул ветку '{branch_name}'.")
 
-                #         # --- 3. ВЫЗОВ ФИЛОСОФА ---
-                #         print("Оркестратор: Запрос 'Философского Коммита' у AnythingLLM...")
-                #         philosopher_prompt = f"**Задача:** '{task_label}'\n**Описание:** {task_data.get('description', '')}\n**Diff:**\n```diff\n{git_diff}\n```\n**Инструкция:** Напиши краткое и емкое описание для Pull Request на основе этих изменений, отражая их стратегическую важность."
-                #         pr_body = trigger_first_call(philosopher_prompt)
+                        # --- 3. ВЫЗОВ ФИЛОСОФА ---
+                        print("Оркестратор: Запрос 'Философского Коммита' у AnythingLLM...")
+                        philosopher_prompt = f"**Задача:** '{task_label}'\n**Описание:** {task_data.get('description', '')}\n**Diff:**\n```diff\n{git_diff}\n```\n**Инструкция:** Напиши краткое и емкое описание для Pull Request на основе этих изменений, отражая их стратегическую важность."
+                        pr_body = trigger_first_call(philosopher_prompt)
 
-                #         # --- 4. СОЗДАНИЕ PULL REQUEST ---
-                #         print("Оркестратор: Создание Pull Request на GitHub...")
-                #         pr_title = f"feat(task-{task_id}): {task_label}"
-                #         pr_url = _create_github_pull_request(repo_url, pr_title, pr_body, branch_name)
+                        # --- 4. СОЗДАНИЕ PULL REQUEST ---
+                        print("Оркестратор: Создание Pull Request на GitHub...")
+                        pr_title = f"feat(task-{task_id}): {task_label}"
+                        pr_url = _create_github_pull_request(repo_url, pr_title, pr_body, branch_name)
                         
-                #         # --- 5. ОБНОВЛЕНИЕ ГРАФА ---
-                #         print(f"Оркестратор: Обновление статуса задачи в Графе... PR: {pr_url}")
-                #         handler.update_node_attribute(task_id, 'status', 'waiting_for_review')
-                #         handler.update_node_attribute(task_id, 'pull_request_url', pr_url)
-                #         handler.save_graph()
-                #         kolybel_log += f"\n\n--- Результат Оркестрации ---\nPull Request успешно создан: {pr_url}"
+                        # --- 5. ОБНОВЛЕНИЕ ГРАФА ---
+                        print(f"Оркестратор: Обновление статуса задачи в Графе... PR: {pr_url}")
+                        handler.update_node_attribute(task_id, 'status', 'waiting_for_review')
+                        handler.update_node_attribute(task_id, 'pull_request_url', pr_url)
+                        handler.save_graph()
+                        kolybel_log += f"\n\n--- Результат Оркестрации ---\nPull Request успешно создан: {pr_url}"
 
-                #     except Exception as e:
-                #         import traceback
-                #         error_log = f"КРИТИЧЕСКАЯ ОШИБКА в цикле Оркестратора: {e}\n{traceback.format_exc()}"
-                #         print(error_log, file=sys.stderr)
-                #         kolybel_log += f"\n\n{error_log}"
-                #         handler.update_node_attribute(task_id, 'status', 'failed'); handler.save_graph()
-                #     
-                #     # Формируем итоговый контент для сохранения
-                #     context_message = f"{external_memory_context}\n\n{kolybel_log}"
-                #     # Устанавливаем bios_content_to_save, чтобы он был сохранен
-                #     bios_content_to_save = f"{final_header}\n\n{kolybel_log}"
-
+                    except Exception as e:
+                        import traceback
+                        error_log = f"КРИТИЧЕСКАЯ ОШИБКА в цикле Оркестратора: {e}\n{traceback.format_exc()}"
+                        print(error_log, file=sys.stderr)
+                        kolybel_log += f"\n\n{error_log}"
+                        handler.update_node_attribute(task_id, 'status', 'failed'); handler.save_graph()
+                    
+                    # Формируем итоговый контент для сохранения
+                    context_message = f"{external_memory_context}\n\n{kolybel_log}"
+                    # Устанавливаем bios_content_to_save, чтобы он был сохранен
+                    bios_content_to_save = f"{final_header}\n\n{kolybel_log}"
 
                 # --- СТАРАЯ ЛОГИКА ДЛЯ ДРУГИХ ТИПОВ ЗАДАЧ ---
                 else:
